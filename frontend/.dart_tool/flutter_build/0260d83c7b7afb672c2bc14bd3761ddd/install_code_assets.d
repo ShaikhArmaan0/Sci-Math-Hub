@@ -1,0 +1,1 @@
+ D:\\Documents\\Projects\\files\\Sci-Math\ HUB\\frontend\\.dart_tool\\flutter_build\\0260d83c7b7afb672c2bc14bd3761ddd\\native_assets.json: 

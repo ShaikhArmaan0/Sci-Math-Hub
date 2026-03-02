@@ -14,7 +14,8 @@ def create_app(config_name=None):
 
     app = Flask(__name__)
     app.config.from_object(config.get(config_name, config["default"]))
-    app.config["MONGO_URI"] = app.config.get("MONGO_URI", "mongodb://localhost:27017/sci_math_hub")
+    # app.config["MONGO_URI"] = app.config.get("MONGO_URI", "mongodb://localhost:27017/sci_math_hub")
+    app.config["MONGO_URI"] = os.getenv("MONGO_URI")
 
     # Init extensions
     mongo.init_app(app)

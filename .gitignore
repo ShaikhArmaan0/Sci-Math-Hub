@@ -1,0 +1,14 @@
+# Flutter / Android build folders
+build/
+frontend/build/
+android/build/
+ios/build/
+
+# Node
+node_modules/
+
+# Logs
+*.log
+
+# Environment files
+.env

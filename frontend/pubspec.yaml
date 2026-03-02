@@ -1,0 +1,55 @@
+name: sci_math_hub
+description: Sci-Math Hub - Gamified E-Learning Platform for Classes 8, 9, 10
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.1.2
+
+  # HTTP & API
+  http: ^1.2.0
+
+  # Secure Storage (JWT)
+  flutter_secure_storage: ^9.0.0
+
+  # Local Preferences
+  shared_preferences: ^2.2.2
+
+  # UI Components
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+
+  # Utilities
+  intl: ^0.20.2
+  url_launcher: ^6.2.4
+  connectivity_plus: ^5.0.2
+
+  # PDF Viewer
+  flutter_pdfview: ^1.3.2
+  path_provider: ^2.1.2
+
+  # YouTube in-app player via WebView
+  webview_flutter: ^4.8.0
+
+  # Image picker for doubts
+  image_picker: ^1.1.2
+
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

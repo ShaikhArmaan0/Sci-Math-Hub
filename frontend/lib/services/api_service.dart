@@ -236,6 +236,9 @@ class ApiService {
   static Future<Map<String, dynamic>> upvoteAnswer(String answerId) =>
       _safe(_post('/api/doubts/answers/$answerId/upvote', {}));
 
+  static Future<Map<String, dynamic>> deleteAnswer(String answerId) =>
+      _safe(_delete('/api/doubts/answers/$answerId'));
+
   static Future<Map<String, dynamic>> resolveDoubt(String doubtId) =>
       _safe(_put('/api/doubts/$doubtId/resolve', {}));
 

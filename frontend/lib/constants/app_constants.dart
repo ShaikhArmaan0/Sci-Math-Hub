@@ -3,8 +3,7 @@ class AppConstants {
   // static const String baseUrl = 'http://10.0.2.2:5000'; // Android emulator
   // static const String baseUrl = 'http://localhost:5000'; // iOS simulator
   // static const String baseUrl = 'http://192.168.137.1:5000'; // Physical device
-  static const String baseUrl = 'https://sci-math-hub.onrender.com';
-
+ static const String baseUrl = 'https://sci-math-hub.onrender.com';
   // Storage Keys
   static const String jwtKey = 'jwt_token';
   static const String userKey = 'user_data';

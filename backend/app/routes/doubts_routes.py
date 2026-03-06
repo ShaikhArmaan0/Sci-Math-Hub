@@ -123,13 +123,25 @@ def upvote_answer(answer_id):
     if not ans: return err("Answer not found", 404)
     upvoted_by = ans.get("upvoted_by", [])
     if uid in upvoted_by:
-        # Un-upvote
         doubt_answers_col().update_one({"_id": oid}, {
             "$inc": {"upvotes": -1}, "$pull": {"upvoted_by": uid}})
         return ok(message="Upvote removed")
     doubt_answers_col().update_one({"_id": oid}, {
         "$inc": {"upvotes": 1}, "$push": {"upvoted_by": uid}})
     return ok(message="Upvoted")
+
+
+# ── DELETE an answer ──────────────────────────────────────────────────────────
+@doubts_bp.route("/answers/<answer_id>", methods=["DELETE"])
+@jwt_required()
+def delete_answer(answer_id):
+    uid = get_jwt_identity()
+    oid = to_object_id(answer_id)
+    ans = doubt_answers_col().find_one({"_id": oid})
+    if not ans: return err("Answer not found", 404)
+    if ans["user_id"] != uid: return err("Forbidden", 403)
+    doubt_answers_col().delete_one({"_id": oid})
+    return ok(message="Answer deleted")
 
 
 # ── Get user activity ─────────────────────────────────────────────────────────

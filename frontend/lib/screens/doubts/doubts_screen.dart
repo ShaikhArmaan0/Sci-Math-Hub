@@ -41,6 +41,52 @@ class _DoubtsScreenState extends State<DoubtsScreen> {
     }
   }
 
+  Future<void> _confirmDeleteDoubt(String doubtId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(children: [
+          Icon(Icons.delete_outline, color: Colors.red, size: 22),
+          SizedBox(width: 8),
+          Text('Delete Doubt', style: TextStyle(fontSize: 17)),
+        ]),
+        content: const Text(
+          'This will permanently delete your doubt and all its answers. Are you sure?',
+          style: TextStyle(fontSize: 14, height: 1.5),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final res = await ApiService.deleteDoubt(doubtId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(res['_ok'] == true ? 'Doubt deleted' : 'Failed to delete'),
+          backgroundColor: res['_ok'] == true ? Colors.red : Colors.grey,
+          behavior: SnackBarBehavior.floating,
+        ));
+        if (res['_ok'] == true) _load();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -55,8 +101,7 @@ class _DoubtsScreenState extends State<DoubtsScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               children: _subjects.map((s) {
-                final selected = (s == 'All' && _selectedSubject == null) ||
-                    s == _selectedSubject;
+                final selected = (s == 'All' && _selectedSubject == null) || s == _selectedSubject;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
@@ -75,9 +120,7 @@ class _DoubtsScreenState extends State<DoubtsScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: auth.isLoggedIn
-            ? () => _showPostDoubt(context)
-            : () => showLoginRequiredSheet(context),
+        onPressed: auth.isLoggedIn ? () => _showPostDoubt(context) : () => showLoginRequiredSheet(context),
         icon: const Icon(Icons.add),
         label: const Text('Ask Doubt'),
         backgroundColor: AppColors.primary,
@@ -92,15 +135,23 @@ class _DoubtsScreenState extends State<DoubtsScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
                     itemCount: _doubts.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (_, i) => _DoubtCard(
-                      doubt: _doubts[i],
-                      onTap: () async {
-                        await Navigator.push(context, MaterialPageRoute(
-                            builder: (_) => DoubtDetailScreen(
-                                doubtId: _doubts[i]['_id'])));
-                        _load();
-                      },
-                    ),
+                    itemBuilder: (_, i) {
+                      final doubt = _doubts[i];
+                      final isOwner = auth.isLoggedIn &&
+                          doubt['user_id']?.toString() == auth.user?.id;
+                      return _DoubtCard(
+                        doubt: doubt,
+                        isOwner: isOwner,
+                        onTap: () async {
+                          await Navigator.push(context, MaterialPageRoute(
+                              builder: (_) => DoubtDetailScreen(doubtId: doubt['_id'])));
+                          _load();
+                        },
+                        onLongPress: isOwner
+                            ? () => _confirmDeleteDoubt(doubt['_id']?.toString() ?? '')
+                            : null,
+                      );
+                    },
                   ),
                 ),
     );
@@ -125,13 +176,10 @@ class _DoubtsScreenState extends State<DoubtsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setSt) => Padding(
-          padding: EdgeInsets.only(
-              left: 20, right: 20, top: 20,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
+          padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               const Text('Ask a Doubt', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
@@ -139,7 +187,6 @@ class _DoubtsScreenState extends State<DoubtsScreen> {
               IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
             ]),
             const SizedBox(height: 12),
-            // Subject picker
             DropdownButtonFormField<String>(
               value: subject,
               decoration: const InputDecoration(labelText: 'Subject', border: OutlineInputBorder()),
@@ -148,7 +195,6 @@ class _DoubtsScreenState extends State<DoubtsScreen> {
               onChanged: (v) => setSt(() => subject = v!),
             ),
             const SizedBox(height: 12),
-            // Text field
             TextField(
               controller: textCtrl,
               maxLines: 4,
@@ -159,19 +205,14 @@ class _DoubtsScreenState extends State<DoubtsScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            // Image picker
             if (imageName != null)
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
                 child: Row(children: [
                   const Icon(Icons.image, color: AppColors.primary, size: 20),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(imageName!, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13))),
+                  Expanded(child: Text(imageName!, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))),
                   IconButton(
                     icon: const Icon(Icons.close, size: 16),
                     onPressed: () => setSt(() { imageBase64 = null; imageName = null; }),
@@ -184,14 +225,10 @@ class _DoubtsScreenState extends State<DoubtsScreen> {
                 icon: const Icon(Icons.camera_alt_outlined, size: 18),
                 label: const Text('Camera'),
                 onPressed: () async {
-                  final img = await ImagePicker().pickImage(
-                      source: ImageSource.camera, imageQuality: 60);
+                  final img = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 60);
                   if (img != null) {
                     final bytes = await File(img.path).readAsBytes();
-                    setSt(() {
-                      imageBase64 = base64Encode(bytes);
-                      imageName = img.name;
-                    });
+                    setSt(() { imageBase64 = base64Encode(bytes); imageName = img.name; });
                   }
                 },
               ),
@@ -200,14 +237,10 @@ class _DoubtsScreenState extends State<DoubtsScreen> {
                 icon: const Icon(Icons.image_outlined, size: 18),
                 label: const Text('Gallery'),
                 onPressed: () async {
-                  final img = await ImagePicker().pickImage(
-                      source: ImageSource.gallery, imageQuality: 60);
+                  final img = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 60);
                   if (img != null) {
                     final bytes = await File(img.path).readAsBytes();
-                    setSt(() {
-                      imageBase64 = base64Encode(bytes);
-                      imageName = img.name;
-                    });
+                    setSt(() { imageBase64 = base64Encode(bytes); imageName = img.name; });
                   }
                 },
               ),
@@ -219,17 +252,12 @@ class _DoubtsScreenState extends State<DoubtsScreen> {
                 onPressed: () async {
                   if (textCtrl.text.trim().isEmpty && imageBase64 == null) return;
                   Navigator.pop(ctx);
-                  final res = await ApiService.postDoubt(
-                    textCtrl.text.trim(),
-                    subject: subject,
-                    imageBase64: imageBase64,
-                  );
+                  final res = await ApiService.postDoubt(textCtrl.text.trim(), subject: subject, imageBase64: imageBase64);
                   if (res['_ok'] == true) {
                     _load();
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Doubt posted!'),
-                            backgroundColor: AppColors.accent));
+                          const SnackBar(content: Text('Doubt posted!'), backgroundColor: AppColors.accent));
                     }
                   }
                 },
@@ -243,10 +271,19 @@ class _DoubtsScreenState extends State<DoubtsScreen> {
   }
 }
 
+// ── Doubt Card ────────────────────────────────────────────────────────────────
 class _DoubtCard extends StatelessWidget {
   final Map<String, dynamic> doubt;
+  final bool isOwner;
   final VoidCallback onTap;
-  const _DoubtCard({required this.doubt, required this.onTap});
+  final VoidCallback? onLongPress;
+
+  const _DoubtCard({
+    required this.doubt,
+    required this.isOwner,
+    required this.onTap,
+    this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -254,73 +291,95 @@ class _DoubtCard extends StatelessWidget {
     return Card(
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: AppColors.primary.withOpacity(0.15),
-                child: Text((doubt['user_name'] ?? 'U')[0].toUpperCase(),
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
-              ),
-              const SizedBox(width: 8),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(doubt['user_name'] ?? 'Student',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                Text(_timeAgo(doubt['created_at'] ?? ''),
-                    style: const TextStyle(color: Colors.grey, fontSize: 11)),
-              ])),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: (isResolved ? AppColors.accent : AppColors.warning).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
+        child: Stack(children: [
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: AppColors.primary.withOpacity(0.15),
+                  child: Text((doubt['user_name'] ?? 'U')[0].toUpperCase(),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary)),
                 ),
-                child: Text(isResolved ? '✅ Resolved' : '❓ Open',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: isResolved ? AppColors.accent : AppColors.warning,
-                        fontWeight: FontWeight.w600)),
-              ),
-            ]),
-            if ((doubt['text'] ?? '').isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(doubt['user_name'] ?? 'Student',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  Text(_timeAgo(doubt['created_at'] ?? ''),
+                      style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                ])),
+                // push resolved badge a little right when owner hint is shown
+                SizedBox(width: isOwner ? 60 : 0),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: (isResolved ? AppColors.accent : AppColors.warning).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(isResolved ? '✅ Resolved' : '❓ Open',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: isResolved ? AppColors.accent : AppColors.warning,
+                          fontWeight: FontWeight.w600)),
+                ),
+              ]),
+              if ((doubt['text'] ?? '').isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(doubt['text'], maxLines: 3, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 14, height: 1.4)),
+              ],
+              if ((doubt['image_base64'] ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(base64Decode(doubt['image_base64']),
+                      height: 120, width: double.infinity, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                ),
+              ],
               const SizedBox(height: 10),
-              Text(doubt['text'], maxLines: 3, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 14, height: 1.4)),
-            ],
-            if ((doubt['image_base64'] ?? '').isNotEmpty) ...[
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.memory(
-                  base64Decode(doubt['image_base64']),
-                  height: 120, width: double.infinity, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              ),
-            ],
-            const SizedBox(height: 10),
-            Row(children: [
-              _tag(doubt['subject'] ?? 'General', AppColors.primary),
-              const Spacer(),
-              const Icon(Icons.chat_bubble_outline, size: 14, color: Colors.grey),
-              const SizedBox(width: 4),
-              Text('${doubt['answer_count'] ?? 0} answers',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              Row(children: [
+                _tag(doubt['subject'] ?? 'General', AppColors.primary),
+                const Spacer(),
+                const Icon(Icons.chat_bubble_outline, size: 14, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text('${doubt['answer_count'] ?? 0} answers',
+                    style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              ]),
             ]),
-          ]),
-        ),
+          ),
+
+          // ── "Hold to delete" badge — only visible to owner ──────────────
+          if (isOwner)
+            Positioned(
+              top: 10,
+              right: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200, width: 0.8),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.delete_outline, size: 12, color: Colors.red.shade400),
+                  const SizedBox(width: 3),
+                  Text('Hold to delete',
+                      style: TextStyle(fontSize: 9, color: Colors.red.shade400, fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            ),
+        ]),
       ),
     );
   }
 
   Widget _tag(String text, Color color) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10)),
+        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
         child: Text(text, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
       );
 
